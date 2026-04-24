@@ -1,0 +1,1 @@
+# crafting-2026-internal-workshop
