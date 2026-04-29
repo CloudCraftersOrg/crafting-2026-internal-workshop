@@ -30,9 +30,9 @@ jobs:
   deploy:
     name: terraform apply for ${{ github.ref_name }}
     runs-on: ubuntu-latest
-    # GitHub Environment scopes the AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY
-    # secrets to this team's branch only.
-    environment: ${{ github.ref_name }}
+    # All seven team branches share the same workshop AWS credentials
+    # (repo-level secrets). Teams are isolated by resource naming +
+    # team-scoped Terraform state, not by IAM identity.
 
     steps:
       - name: Checkout team branch

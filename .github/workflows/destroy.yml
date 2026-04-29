@@ -34,7 +34,6 @@ jobs:
   destroy:
     name: terraform destroy for ${{ inputs.team_id }}
     runs-on: ubuntu-latest
-    environment: ${{ inputs.team_id }}
 
     steps:
       - name: Validate confirmation matches team_id
