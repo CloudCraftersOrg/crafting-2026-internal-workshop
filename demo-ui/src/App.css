@@ -1,0 +1,392 @@
+/* HORROCRUXES Demo UI - Minimalist Harry Potter Theme */
+
+:root {
+  /* Slytherin Colors */
+  --slytherin-green: #1a472a;
+  --slytherin-green-light: #2a623d;
+  --slytherin-silver: #aaaaaa;
+  --slytherin-silver-dark: #7a7a7a;
+
+  /* Magic Gold */
+  --magic-gold: #d4af37;
+  --magic-gold-light: #f0c75e;
+
+  /* Dark Magic Background */
+  --bg-dark: #0a0e27;
+  --bg-dark-lighter: #151b3d;
+  --bg-card: #1a2142;
+
+  /* Text */
+  --text-primary: #f5f5dc;
+  --text-secondary: #c0c0c0;
+  --text-dim: #808080;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background: linear-gradient(135deg, var(--bg-dark) 0%, var(--bg-dark-lighter) 100%);
+  color: var(--text-primary);
+  font-family: 'Lato', sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+.app {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+  min-height: 100vh;
+}
+
+/* Header */
+.header {
+  text-align: center;
+  margin-bottom: 3rem;
+  padding: 2rem 0;
+  border-bottom: 2px solid var(--slytherin-green);
+}
+
+.title {
+  font-family: 'Cinzel', serif;
+  font-size: 3.5rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--magic-gold) 0%, var(--magic-gold-light) 50%, var(--slytherin-silver) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 0.5rem;
+  letter-spacing: 2px;
+  text-shadow: 0 0 20px rgba(212, 175, 55, 0.3);
+}
+
+.subtitle {
+  font-size: 1rem;
+  color: var(--slytherin-silver);
+  font-weight: 300;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+}
+
+.team-badge {
+  display: inline-block;
+  margin-top: 1rem;
+  padding: 0.5rem 1.5rem;
+  background: var(--slytherin-green);
+  color: var(--slytherin-silver);
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 1px;
+  border: 1px solid var(--slytherin-silver-dark);
+}
+
+/* Query Input Section */
+.query-section {
+  background: var(--bg-card);
+  border-radius: 12px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  border: 1px solid var(--slytherin-green-light);
+  box-shadow: 0 4px 20px rgba(26, 71, 42, 0.3);
+}
+
+.query-label {
+  display: block;
+  font-size: 0.9rem;
+  color: var(--magic-gold);
+  margin-bottom: 1rem;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.query-input {
+  width: 100%;
+  background: var(--bg-dark);
+  border: 2px solid var(--slytherin-green);
+  border-radius: 8px;
+  padding: 1rem;
+  color: var(--text-primary);
+  font-size: 1rem;
+  font-family: 'Lato', sans-serif;
+  resize: vertical;
+  min-height: 100px;
+  transition: all 0.3s ease;
+}
+
+.query-input:focus {
+  outline: none;
+  border-color: var(--magic-gold);
+  box-shadow: 0 0 15px rgba(212, 175, 55, 0.2);
+}
+
+.query-input::placeholder {
+  color: var(--text-dim);
+}
+
+.button-group {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.btn {
+  padding: 0.8rem 2rem;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-family: 'Lato', sans-serif;
+  letter-spacing: 0.5px;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--slytherin-green) 0%, var(--slytherin-green-light) 100%);
+  color: var(--slytherin-silver);
+  border: 1px solid var(--slytherin-silver-dark);
+  flex: 1;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, var(--slytherin-green-light) 0%, var(--slytherin-green) 100%);
+  box-shadow: 0 4px 15px rgba(26, 71, 42, 0.5);
+  transform: translateY(-2px);
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--text-dim);
+  padding: 0.8rem 1.5rem;
+}
+
+.btn-secondary:hover {
+  border-color: var(--magic-gold);
+  color: var(--magic-gold);
+}
+
+/* Loading State */
+.loading {
+  text-align: center;
+  padding: 2rem;
+  color: var(--magic-gold);
+}
+
+.loading-spinner {
+  display: inline-block;
+  width: 40px;
+  height: 40px;
+  border: 4px solid var(--bg-dark-lighter);
+  border-top-color: var(--magic-gold);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.loading-text {
+  font-size: 1rem;
+  color: var(--slytherin-silver);
+  letter-spacing: 2px;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+/* Response Section */
+.response-section {
+  background: var(--bg-card);
+  border-radius: 12px;
+  padding: 2rem;
+  border: 1px solid var(--slytherin-green-light);
+  box-shadow: 0 4px 20px rgba(26, 71, 42, 0.3);
+  animation: fadeIn 0.5s ease-in;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.response-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--slytherin-green);
+}
+
+.response-title {
+  font-size: 0.9rem;
+  color: var(--magic-gold);
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.session-id {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  font-family: monospace;
+}
+
+.response-content {
+  color: var(--text-primary);
+  line-height: 1.8;
+  font-size: 1rem;
+}
+
+/* Markdown Styling */
+.response-content p {
+  margin-bottom: 1rem;
+}
+
+.response-content em {
+  color: var(--magic-gold-light);
+  font-style: italic;
+  display: block;
+  margin-top: 1.5rem;
+  padding: 0.8rem;
+  background: rgba(212, 175, 55, 0.1);
+  border-left: 3px solid var(--magic-gold);
+  border-radius: 4px;
+}
+
+.response-content strong {
+  color: var(--slytherin-silver);
+  font-weight: 700;
+}
+
+.response-content ul,
+.response-content ol {
+  margin-left: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.response-content li {
+  margin-bottom: 0.5rem;
+  color: var(--text-secondary);
+}
+
+.response-content code {
+  background: var(--bg-dark);
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  font-family: monospace;
+  color: var(--magic-gold-light);
+}
+
+/* Quick Examples */
+.examples-section {
+  background: var(--bg-card);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  border: 1px solid var(--slytherin-green-light);
+}
+
+.examples-title {
+  font-size: 0.9rem;
+  color: var(--magic-gold);
+  margin-bottom: 1rem;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.examples-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+}
+
+.example-card {
+  background: var(--bg-dark);
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--slytherin-green);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.example-card:hover {
+  border-color: var(--magic-gold);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(212, 175, 55, 0.2);
+}
+
+.example-tier {
+  font-size: 0.7rem;
+  color: var(--slytherin-silver);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 0.5rem;
+}
+
+.example-text {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+/* Error State */
+.error {
+  background: rgba(220, 53, 69, 0.1);
+  border: 1px solid rgba(220, 53, 69, 0.5);
+  color: #ff6b6b;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-top: 1rem;
+}
+
+/* Footer */
+.footer {
+  text-align: center;
+  margin-top: 4rem;
+  padding-top: 2rem;
+  border-top: 1px solid var(--slytherin-green);
+  color: var(--text-dim);
+  font-size: 0.85rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .app {
+    padding: 1rem;
+  }
+
+  .title {
+    font-size: 2.5rem;
+  }
+
+  .subtitle {
+    font-size: 0.85rem;
+  }
+
+  .examples-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .button-group {
+    flex-direction: column;
+  }
+}
