@@ -186,7 +186,7 @@ That's it. You're in. **No CLI setup, no access keys, no terminal authentication
 
 ### 2. The pipeline's identity (managed by the facilitator)
 
-GitHub Actions runs Terraform under a separate IAM user (`workshop-pipeline`) whose static keys live in repo secrets. You never see or use these. They exist so the pipeline can apply your branch's changes without you needing AWS credentials of your own.
+GitHub Actions assumes an IAM role (`cloudcrafters-workshop-pipeline`) via **GitHub OIDC** — no static keys, no secrets to rotate, just short-lived federated tokens minted on each workflow run. The role's trust policy is scoped to this repo, so workflows in other repos can't borrow it. You never see or use this — it exists so the pipeline can apply your branch's changes without you needing AWS credentials of your own.
 
 ## Quick start
 
