@@ -171,81 +171,111 @@ Local CLI       AgentCore container
 
 ## Authentication
 
-Workshop attendees only need AWS credentials *locally* to invoke the deployed agent (`invoke_agent.py`). Infrastructure deploys happen in GitHub Actions, so you never run Terraform yourself.
+There are **two identities** in this workshop and you only deal with one of them:
 
-The facilitator hands each team an Access Key ID + Secret. Drop them into `~/.aws/credentials`:
+### 1. Your team's identity — IAM Identity Center (you)
 
-```ini
-[default]
-aws_access_key_id = AKIA...
-aws_secret_access_key = ...
-region = us-east-1
-```
+Your team representative gives the facilitator one email address. Each team gets a single user in **AWS IAM Identity Center**. Sign-in flow:
 
-Or per-shell:
+1. Check your inbox for an *"Invitation to join AWS"* email from `no-reply@signin.aws`.
+2. Click the link, set your password, complete MFA setup.
+3. You'll land on a personal **AWS access portal** (`https://d-xxxxxxxxxx.awsapps.com/start`).
+4. Click the workshop account → choose the **`WorkshopOnlyAccess`** role → AWS Console opens.
 
-```bash
-export AWS_ACCESS_KEY_ID=AKIA...
-export AWS_SECRET_ACCESS_KEY=...
-export AWS_REGION=us-east-1
-```
+That's it. You're in. **No CLI setup, no access keys, no terminal authentication.** The Identity Center session lasts 8 hours by default; renew by going back to the access portal.
 
-Both `boto3` and the AWS CLI pick these up automatically.
+### 2. The pipeline's identity (managed by the facilitator)
 
-> **Facilitators / contributors** can also use AWS SSO (`aws configure sso` → `export AWS_PROFILE=yours`). The pipeline itself uses static keys stored in GitHub Environments.
+GitHub Actions runs Terraform under a separate IAM user (`workshop-pipeline`) whose static keys live in repo secrets. You never see or use these. They exist so the pipeline can apply your branch's changes without you needing AWS credentials of your own.
 
 ## Quick start
 
-### Prerequisites (workshop attendees)
-- A clone of this repo
-- Their team's AWS access keys placed in `~/.aws/credentials` (the facilitator will hand these out)
-- Python ≥ 3.12 and `uv` (only for testing the deployed agent locally)
+> **No local setup required.** You can do the entire workshop from your browser: edit code on GitHub, watch the pipeline deploy, and test the agent in the AWS Console. Skip to **Optional: local development** at the bottom if you'd rather use a real editor + CLI.
 
-**Attendees do not need Terraform or Docker locally.** All infrastructure changes go through GitHub Actions on push to the team's branch.
+### Prerequisites
+- A modern browser
+- The IAM Identity Center invite from the facilitator (see [Authentication](#authentication))
+- Your GitHub account added as a collaborator to the repo
 
-### 1. Switch to your team's branch
+### Your 7 team branches
 
-Each team has a dedicated branch named after them. There are 7 teams:
+Each team has a branch named after them. There are 7 teams (4 Hogwarts houses + 3 wizarding locations):
 
 ```
 gryffindor   slytherin   ravenclaw   hufflepuff
 hogsmeade    diagon      gringotts
 ```
 
+The branch name **is** your `team_id` — every AWS resource the pipeline creates will be named after it.
+
+### 1. Find your team's branch on GitHub
+
+Open <https://github.com/CloudCraftersOrg/crafting-2026-internal-workshop> and use the branch dropdown to switch to your team (e.g. `gryffindor`).
+
+### 2. Edit a file in the GitHub web UI
+
+Click any file (`app/src/workshop_agent/agent.py` is the most useful starting point), then click the ✏️ pencil icon, top-right. Make your change. At the bottom of the page, **commit directly to your team's branch**.
+
+### 3. Watch the pipeline deploy
+
+Open the **Actions** tab — you'll see a "Deploy team infra" run kick off automatically.
+- First deploy on a fresh branch: ~5–8 minutes (Docker build + KB ingestion)
+- Subsequent deploys: usually ~2–3 minutes
+
+When it finishes, the workflow posts a commit comment with your team's deployment IDs (runtime ARN, KB ID, memory ID).
+
+### 4. Test the agent in the AWS Console
+
+Sign in via the Identity Center portal and go to:
+
+> **Bedrock AgentCore → Runtimes** → click `workshop_agent_<your-team>` → **Sessions / Test**
+
+Type a prompt (e.g. *"What did Harry use to sneak around Hogwarts at night?"*) and hit enter. The agent answers from the Knowledge Base, with citations.
+
+You can also browse logs at **CloudWatch → Log groups → `/aws/bedrock-agentcore/runtimes/workshop_agent_<your-team>-DEFAULT`** to see what tool the agent called and why.
+
+### Iterate
+
+1. Change `agent.py` in the GitHub web UI → commit
+2. Wait for the pipeline (Actions tab)
+3. Re-test in the AWS Console
+4. Repeat
+
+That's the full loop. No clone, no Python venv, no `terraform apply`, no Docker.
+
+---
+
+### Optional: local development
+
+If you'd rather use your own editor and a CLI, you can also clone the repo and use `invoke_agent.py` to talk to the deployed runtime. You'll need:
+
+- Python ≥ 3.12 and `uv`
+- AWS CLI v2 with SSO configured against the workshop account
+
 ```bash
-git clone git@github.com:CloudCraftersOrg/crafting-2026-internal-workshop.git
+# One-time setup
+git clone https://github.com/CloudCraftersOrg/crafting-2026-internal-workshop.git
 cd crafting-2026-internal-workshop
-git checkout gryffindor    # use your team's branch name
-```
+git checkout <your-team-branch>
 
-### 2. Edit, commit, push
-
-Make changes (typically to `app/src/workshop_agent/agent.py` and friends), commit, and push to your branch:
-
-```bash
-git add -A && git commit -m "Add verification agent"
-git push origin gryffindor
-```
-
-### 3. Watch the pipeline
-
-GitHub Actions runs `terraform apply` automatically on every push. Open the **Actions** tab of the repo and watch your team's deploy run. ~5–8 min on first apply (Docker build + KB ingestion); subsequent applies are faster.
-
-When the run finishes, it leaves a comment on your commit with the deployment outputs (`agent_runtime_arn`, `knowledge_base_id`, `memory_id`).
-
-### 4. Test locally against your deployed agent
-
-Copy the env block from the pipeline's commit comment into `app/.env`, then:
-
-```bash
 cd app
 pip install uv
 uv venv && source .venv/bin/activate
 uv pip install -e .
+
+# Configure AWS SSO (one-time)
+aws configure sso          # use the start URL the facilitator provides
+
+# Refresh creds when needed
+aws sso login --profile <your-profile>
+export AWS_PROFILE=<your-profile>
+
+# Pull the deployment IDs from your most recent pipeline commit comment into app/.env
+# Then:
 python invoke_agent.py --interactive
 ```
 
-Try one query from each tier ([sample queries above](#difficulty-tiers-and-sample-queries)).
+Edit code locally, commit + push, the pipeline still does the deploy.
 
 ## Multi-team deployments
 
