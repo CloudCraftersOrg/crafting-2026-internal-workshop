@@ -270,10 +270,26 @@ aws configure sso          # use the start URL the facilitator provides
 aws sso login --profile <your-profile>
 export AWS_PROFILE=<your-profile>
 
-# Pull the deployment IDs from your most recent pipeline commit comment into app/.env
-# Then:
+# Populate app/.env (see below), then:
 python invoke_agent.py --interactive
 ```
+
+#### Populating `app/.env`
+
+`cp .env.example .env` first, then fill in the per-team values.
+
+**Easiest:** the deploy pipeline posts a ready-to-paste env block as a commit comment after each successful run. Open the **Actions** tab, click your team's most recent green run, follow the link to the triggering commit, and copy the env block from the bottom comment.
+
+**Alternative — pull each value from the AWS Console** (handy when you can't find the commit comment, or after a destroy + redeploy):
+
+| Variable | Where to find it in the console |
+|---|---|
+| `AWS_REGION` | Always `us-east-1` for this workshop |
+| `MODEL_ID` | Use the default already in `.env.example` (`us.amazon.nova-lite-v1:0`) unless you've changed it on your branch |
+| `MEMORY_ID` | **Bedrock → AgentCore → Memory** → click `workshop_agent_<your-team>_memory` → copy the *Memory ID* (looks like `workshop_agent_<team>_memory-xxxxxxxxxx`) |
+| `MEMORY_ACTOR_ID` | Your team name (e.g. `gryffindor`). This is just a string namespace — you choose it. |
+| `KNOWLEDGE_BASE_ID` | **Bedrock → Knowledge Bases** → click `workshop_agent_<your-team>_harry_potter_kb` → copy the *Knowledge base ID* (10-char alphanumeric) |
+| `AGENT_RUNTIME_ARN` | **Bedrock → AgentCore → Runtimes** → click `workshop_agent_<your-team>` → copy the *Runtime ARN* from the Details panel |
 
 Edit code locally, commit + push, the pipeline still does the deploy.
 
