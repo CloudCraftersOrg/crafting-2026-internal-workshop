@@ -92,7 +92,7 @@ jobs:
               ``,
               '```ini',
               `AWS_REGION=us-east-1`,
-              `MODEL_ID=us.amazon.nova-lite-v1:0`,
+              `MODEL_ID=us.amazon.nova-pro-v1:0`,
               `MEMORY_ID=${{ steps.tf.outputs.memory_id }}`,
               `MEMORY_ACTOR_ID=${{ github.ref_name }}`,
               `KNOWLEDGE_BASE_ID=${{ steps.tf.outputs.knowledge_base_id }}`,
