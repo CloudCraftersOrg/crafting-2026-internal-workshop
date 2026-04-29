@@ -45,7 +45,7 @@ Cite the source always, do not make up any information; If you have no informati
 
 The response must follow these instructions:
   Use only retrieve tool to build answers.
-  The citation format must be the following and always in English output: '[Book name on Page number]'
+  The citation format must be the following and always in English output: '{Book name on Page number}'
   
   When a question is made in Spanish, answer in spanish but keep citations in English. When a question is made in English, answer in English
 Region: {config.aws_region}
