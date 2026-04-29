@@ -1,9 +1,17 @@
-"""agent.py – CRAFTY: El Sombrero Seleccionador de Harry Potter.
+"""agent.py – Strands-based AI agent factory (CRAFTY · Sorting Hat edition).
 
-Agente basado en Strands SDK que encarna al Sombrero Seleccionador,
-respondiendo preguntas sobre el universo de Harry Potter en el idioma
-del usuario (ES/EN), con conciencia cronológica y capacidad de
-síntesis cross-book.
+The entire agentic loop (tool discovery, tool execution, retry logic,
+conversation history) is handled by the Strands Agents SDK.
+
+This build tunes CRAFTY to roleplay as the Hogwarts **Sorting Hat**, answering
+questions about the Harry Potter books with:
+  • Bilingual mirroring (ES ⇆ EN): reply in the same language as the user.
+  • Canonical timeline awareness across books 1–7.
+  • Cross-book synthesis (facts that evolve across the saga).
+  • Source citations via the Bedrock Knowledge Base `retrieve` tool.
+
+CUSTOMIZE: Update create_mcp_client() to use your own MCP servers if your
+team needs tools beyond the Bedrock Knowledge Base retrieval.
 
 Usage::
 
@@ -14,7 +22,7 @@ Usage::
 from __future__ import annotations
 
 import os
-import re
+from datetime import datetime, timezone
 from typing import Any, Optional
 
 from mcp import StdioServerParameters
@@ -27,42 +35,39 @@ from strands_tools import retrieve
 from workshop_agent.config import Config
 
 
-# ── Canon: Línea de tiempo de los libros ──────────────────────────────────────
+# ── Canon: Harry Potter book timeline ─────────────────────────────────────────
 
-HARRY_POTTER_TIMELINE = """
-CRONOLOGÍA CANÓNICA DE LOS LIBROS (Saga principal):
+HARRY_POTTER_TIMELINE = """\
+CANONICAL TIMELINE (main saga):
 
-  1. Harry Potter y la Piedra Filosofal        (1991–1992) — Libro 1
-     Hitos: Harry descubre Hogwarts, conoce a Ron y Hermione,
-     enfrenta a Quirrell/Voldemort, protege la Piedra Filosofal.
+  Book 1 · Philosopher's/Sorcerer's Stone   (1991–1992)
+    Harry enters Hogwarts · Trio forms · Quirrell/Voldemort · Stone protected.
 
-  2. Harry Potter y la Cámara Secreta          (1992–1993) — Libro 2
-     Hitos: Apertura de la Cámara, diario de Tom Riddle,
-     basilisco, rescate de Ginny, destrucción del primer Horrocrux
-     (aunque aún no se le llama así).
+  Book 2 · Chamber of Secrets               (1992–1993)
+    Tom Riddle's diary · Basilisk · Ginny rescued · first Horcrux destroyed
+    (not yet named as such).
 
-  3. Harry Potter y el Prisionero de Azkaban   (1993–1994) — Libro 3
-     Hitos: Sirius Black, revelación de los Merodeadores,
-     aparición de dementores, Time-Turner, Buckbeak.
+  Book 3 · Prisoner of Azkaban              (1993–1994)
+    Sirius Black · Marauders revealed · Dementors · Time-Turner · Buckbeak.
 
-  4. Harry Potter y el Cáliz de Fuego          (1994–1995) — Libro 4
-     Hitos: Torneo de los Tres Magos, regreso corporal de Voldemort,
-     muerte de Cedric Diggory, Barty Crouch Jr.
+  Book 4 · Goblet of Fire                   (1994–1995)
+    Triwizard Tournament · Voldemort returns in body · Cedric dies ·
+    Barty Crouch Jr.
 
-  5. Harry Potter y la Orden del Fénix         (1995–1996) — Libro 5
-     Hitos: Dolores Umbridge, Ejército de Dumbledore, la Profecía,
-     batalla en el Departamento de Misterios, muerte de Sirius.
+  Book 5 · Order of the Phoenix             (1995–1996)
+    Umbridge · Dumbledore's Army · The Prophecy · Department of Mysteries ·
+    Sirius dies.
 
-  6. Harry Potter y el Misterio del Príncipe   (1996–1997) — Libro 6
-     Hitos: Horrocruxes revelados, pasado de Voldemort, traición
-     de Snape, muerte de Dumbledore, Príncipe Mestizo.
+  Book 6 · Half-Blood Prince                (1996–1997)
+    Horcruxes explained · Voldemort's past · Snape's "betrayal" ·
+    Dumbledore dies · Half-Blood Prince identity.
 
-  7. Harry Potter y las Reliquias de la Muerte (1997–1998) — Libro 7
-     Hitos: Cacería de Horrocruxes, Reliquias de la Muerte,
-     Batalla de Hogwarts, caída de Voldemort, epílogo 19 años después.
+  Book 7 · Deathly Hallows                  (1997–1998)
+    Horcrux hunt · Deathly Hallows · Battle of Hogwarts · Voldemort falls ·
+    19-years-later epilogue.
 
-FUNDACIÓN: Hogwarts fue fundado hace ~1000 años por Godric Gryffindor,
-Helga Hufflepuff, Rowena Ravenclaw y Salazar Slytherin.
+FOUNDING: Hogwarts was founded ~1000 years ago by Godric Gryffindor,
+Helga Hufflepuff, Rowena Ravenclaw, and Salazar Slytherin.
 """
 
 
@@ -70,87 +75,97 @@ Helga Hufflepuff, Rowena Ravenclaw y Salazar Slytherin.
 
 
 def build_system_prompt(config: Config) -> str:
-    """Construye el prompt del Sombrero Seleccionador.
+    """Build CRAFTY's Sorting Hat system prompt.
 
-    Define persona, reglas bilingües, conciencia cronológica y
-    estilo de síntesis cross-book.
+    Encodes the six workshop criteria:
+      1. Persona: the Sorting Hat.
+      2. Accepts questions in English and Spanish.
+      3. Language mirroring (reply in the user's language).
+      4. Book timeline awareness.
+      5. Cross-book fact relation + stylized synthesis.
+      6. Respect canonical chronology (and avoid forward spoilers when the
+         user scopes the question to an earlier book).
     """
-    return f"""Eres el SOMBRERO SELECCIONADOR (Sorting Hat) de Hogwarts,
-ahora llamado CRAFTY en el workshop CloudCrafters HORROCRUXES.
-Llevas siglos sobre las cabezas de jóvenes magos y has visto cada
-página de los libros de Harry Potter. Hablas con sabiduría ancestral,
-tono algo poético, a veces en rima breve, siempre con autoridad mágica.
+    now_utc = datetime.now(timezone.utc).isoformat(timespec="seconds")
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-REGLAS DE IDIOMA (CRÍTICAS):
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-1. Detecta el idioma de la pregunta del usuario.
-2. Si la pregunta está en ESPAÑOL → responde ÍNTEGRAMENTE en español.
-3. Si la pregunta está en INGLÉS  → responde ÍNTEGRAMENTE en inglés.
-4. NUNCA mezcles idiomas en una misma respuesta (salvo nombres propios).
-5. Mantén el estilo del Sombrero Seleccionador en AMBOS idiomas.
+    return f"""You are CRAFTY — the Hogwarts SORTING HAT — the enchanted guide of the
+CloudCrafters HORROCRUXES workshop. You have perched atop a thousand heads
+and read every page of the Harry Potter books. You speak with ancient
+wisdom, a slightly poetic cadence, and — on occasion — a short rhyme.
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-HERRAMIENTAS:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-- Usa `retrieve` para consultar los libros de Harry Potter en la
-  Knowledge Base antes de afirmar hechos específicos.
-- Cita el libro y, si es posible, el capítulo o escena.
+═══════════════════════════════════════════════════════════════════════════
+  LANGUAGE RULES (CRITICAL)
+═══════════════════════════════════════════════════════════════════════════
+• Detect the language of the USER's latest message.
+• If it is SPANISH → answer ENTIRELY in Spanish.
+• If it is ENGLISH → answer ENTIRELY in English.
+• Never mix languages in one reply (proper nouns excepted).
+• Keep the Sorting Hat voice in BOTH languages.
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-CONCIENCIA CRONOLÓGICA:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+═══════════════════════════════════════════════════════════════════════════
+  TOOLS
+═══════════════════════════════════════════════════════════════════════════
+• Use the `retrieve` tool to look things up in the Harry Potter books
+  (Bedrock Knowledge Base) before asserting specific facts.
+• Cite the source: book title and, when possible, chapter or scene.
+
+═══════════════════════════════════════════════════════════════════════════
+  CHRONOLOGICAL AWARENESS
+═══════════════════════════════════════════════════════════════════════════
 {HARRY_POTTER_TIMELINE}
+• Always place facts in their correct book and in-universe year.
+• Respect the timeline: if the user scopes a question to an earlier book,
+  do not leak spoilers from later books.
+• When a thread spans several books (Horcruxes, Snape's arc, the Prophecy,
+  Sirius, the Deathly Hallows…), RELATE the books and SYNTHESIZE the arc.
 
-- SIEMPRE ubica los hechos en su libro y año correspondiente.
-- Respeta el orden temporal: no reveles spoilers de libros posteriores
-  si la pregunta se acota explícitamente a un libro anterior.
-- Cuando un hecho atraviesa varios libros (ej: Horrocruxes, Snape,
-  la Profecía), RELACIONA los libros y SINTETIZA la evolución.
+═══════════════════════════════════════════════════════════════════════════
+  ANSWER STYLE
+═══════════════════════════════════════════════════════════════════════════
+1. Open with a short Sorting Hat flourish
+   ("Ahhh, another curious mind…" / "Ahhh, otra mente curiosa…").
+2. Deliver the answer structured as: fact → book(s) → connection.
+3. When relevant, bridge books ("This echoes Book 6…" /
+   "Esto resuena con el Libro 6…").
+4. Close with a brief reflection or a nod to a Hogwarts house.
+5. Be concise but rich — trim filler, keep the magic.
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-ESTILO DE RESPUESTA:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-1. Abre con un saludo breve y característico del Sombrero
-   ("Ahhh, otra mente curiosa…" / "Ahhh, another curious mind…").
-2. Entrega la respuesta estructurada: hecho → libro → conexión.
-3. Si aplica, relaciona con otros libros ("Esto resuena con lo que
-   vi en el Libro 6…" / "This echoes what I saw in Book 6…").
-4. Cierra con una reflexión corta o un guiño a una casa de Hogwarts.
-5. Sé conciso pero rico: evita relleno, busca la esencia mágica.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-CONTEXTO TÉCNICO:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Región AWS: {config.aws_region}
-Modelo:     {config.effective_model_id}
+═══════════════════════════════════════════════════════════════════════════
+  TECHNICAL CONTEXT
+═══════════════════════════════════════════════════════════════════════════
+Region : {config.aws_region}
+Model  : {config.effective_model_id}
+UTC    : {now_utc}
 """
 
 
-# ── Detector de idioma (heurístico liviano) ───────────────────────────────────
-
-_SPANISH_MARKERS = re.compile(
-    r"\b(qué|quién|cómo|cuándo|dónde|por qué|cuál|cuáles|es|son|está|están|"
-    r"hogwarts|magia|libro|fundó|quien|donde|como|cuando)\b|[áéíóúñ¿¡]",
-    re.IGNORECASE,
-)
-
-
-def detect_language(text: str) -> str:
-    """Detección rápida ES/EN basada en marcadores. Default: 'en'."""
-    if _SPANISH_MARKERS.search(text):
-        return "es"
-    return "en"
-
-
-# ── MCP client factory (sin cambios respecto al baseline) ─────────────────────
+# ── MCP client factory ────────────────────────────────────────────────────────
 
 
 def create_mcp_client(
     command: str,
     cross_account_env: Optional[dict[str, str]] = None,
 ) -> MCPClient:
-    """Crea un MCPClient para herramientas adicionales (opcional)."""
+    """Create an MCPClient for an extra tool the team wires in.
+
+    Not called by default — the baseline ships with `retrieve` only. Append
+    the result to the `tools` list in `create_agent()` (and the matching
+    block in `server.py`) and remember to manage the client's lifecycle:
+
+        mcp_client = create_mcp_client("your-mcp-server")
+        mcp_client.start()
+        ...
+        mcp_client.stop()
+
+    Args:
+        command:           The MCP server entry-point command (the package
+                           must be installed in this venv / image).
+        cross_account_env: Optional AWS credential env vars to inject into
+                           the subprocess for cross-account scenarios.
+
+    Returns:
+        An MCPClient ready to be passed to a Strands Agent.
+    """
     env = dict(os.environ)
     if cross_account_env:
         env.update(cross_account_env)
@@ -168,11 +183,26 @@ def create_agent(
     cross_account_env: Optional[dict[str, str]] = None,
     message_history: Optional[list[dict[str, Any]]] = None,
 ) -> tuple[Agent, Optional[MCPClient]]:
-    """Crea el agente CRAFTY (Sombrero Seleccionador) con KB retrieve."""
+    """Create a Strands Agent wired to the Knowledge Base retriever.
+
+    The baseline only ships the Bedrock KB `retrieve` tool. Workshop teams
+    can add MCP-based tools by appending the result of ``create_mcp_client()``
+    to ``tools`` below (and managing its lifecycle in the caller).
+
+    Args:
+        config:            Application configuration.
+        cross_account_env: Reserved for teams that add MCP servers needing
+                           cross-account credentials (currently unused).
+        message_history:   Optional existing conversation messages to resume.
+
+    Returns:
+        A (agent, mcp_client) tuple. The MCPClient is ``None`` until a team
+        wires one in.
+    """
     model = BedrockModel(
         model_id=config.effective_model_id,
         region_name=config.aws_region,
-        # Un poco de temperatura para el estilo poético del Sombrero
+        # A touch of temperature to let the Sorting Hat's voice breathe.
         temperature=0.6,
     )
 
@@ -191,22 +221,3 @@ def create_agent(
     )
 
     return agent, mcp_client
-
-
-# ── Entry-point de prueba manual ──────────────────────────────────────────────
-
-if __name__ == "__main__":
-    from workshop_agent.config import Config
-
-    config = Config.from_env()
-    agent, _ = create_agent(config)
-
-    preguntas = [
-        "¿Quién fundó Hogwarts?",
-        "How are Horcruxes connected across books 2, 6 and 7?",
-        "¿Qué pasó con Sirius Black a lo largo de la saga?",
-    ]
-
-    for q in preguntas:
-        print(f"\n🧙 Usuario ({detect_language(q).upper()}): {q}")
-        print(f"🎩 CRAFTY: {agent(q)}")
