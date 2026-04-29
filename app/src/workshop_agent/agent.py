@@ -100,7 +100,7 @@ internally to the appropriate sub-agent(s):
 # Output contract (every answer)
 - Direct answer first (no preamble, no "Certainly!").
 - Then a "References" block listing every source used, deduplicated,
-  in canonical form. Example:
+  in canonical form. Make sure that for each response you provide you will include at the end the chapter number and the chapter title. Example:
       References:
         - PS, Ch. 12 "The Mirror of Erised"
         - DH, Ch. 33 "The Prince's Tale"
