@@ -27,10 +27,12 @@ terraform {
     }
   }
 
-  # Store Terraform state remotely with encryption and native file locking
+  # Per-team state. The `key` is injected at `terraform init` time via
+  # `-backend-config="key=workshop-2026/<team_id>/terraform.tfstate"` — the
+  # GitHub Actions pipeline does this automatically based on the branch name.
+  # Local runs need the same flag.
   backend "s3" {
     bucket  = "cloudcrafters-workshop-2026-tfstate"
-    key     = "workshop-2026/terraform.tfstate"
     region  = "us-east-1"
     encrypt = true
   }

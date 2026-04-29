@@ -1,0 +1,76 @@
+name: Destroy team infra
+
+# Manual trigger only — facilitator runs this from the Actions tab to tear
+# down a team's deployment after the workshop or on-demand.
+on:
+  workflow_dispatch:
+    inputs:
+      team_id:
+        description: "Team to destroy"
+        required: true
+        type: choice
+        options:
+          - gryffindor
+          - slytherin
+          - ravenclaw
+          - hufflepuff
+          - hogsmeade
+          - diagon
+          - gringotts
+      confirm:
+        description: 'Type the team name again to confirm'
+        required: true
+        type: string
+
+permissions:
+  id-token: write       # required for OIDC token request to AWS
+  contents: read
+
+env:
+  AWS_REGION: us-east-1
+  TF_VERSION: "1.5.0"
+  STATE_BUCKET: cloudcrafters-workshop-2026-tfstate
+
+jobs:
+  destroy:
+    name: terraform destroy for ${{ inputs.team_id }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Validate confirmation matches team_id
+        if: inputs.team_id != inputs.confirm
+        run: |
+          echo "Confirmation '${{ inputs.confirm }}' did not match team_id '${{ inputs.team_id }}'." >&2
+          exit 1
+
+      - name: Checkout team branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.team_id }}
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform init (team-scoped state)
+        working-directory: terraform
+        run: |
+          terraform init \
+            -backend-config="bucket=${STATE_BUCKET}" \
+            -backend-config="key=workshop-2026/${{ inputs.team_id }}/terraform.tfstate" \
+            -backend-config="region=${AWS_REGION}"
+
+      - name: Terraform destroy
+        working-directory: terraform
+        # -refresh=false bypasses the OpenSearch / S3-Vectors provider
+        # healthcheck during destroy, which has been finicky.
+        run: |
+          terraform destroy -auto-approve -refresh=false \
+            -var="team_id=${{ inputs.team_id }}"

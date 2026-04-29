@@ -171,111 +171,149 @@ Local CLI       AgentCore container
 
 ## Authentication
 
-Both Terraform and the Python agent use the standard AWS credential chain — env vars, then `AWS_PROFILE`, then `~/.aws/credentials`. Either of the paths below works for everything in this repo (`terraform apply`, `workshop-agent`, `invoke_agent.py`).
+There are **two identities** in this workshop and you only deal with one of them:
 
-### Static IAM access keys (workshop attendees)
+### 1. Your team's identity — IAM Identity Center (you)
 
-Drop your keys into `~/.aws/credentials`:
+Your team representative gives the facilitator one email address. Each team gets a single user in **AWS IAM Identity Center**. Sign-in flow:
 
-```ini
-[default]
-aws_access_key_id = AKIA...
-aws_secret_access_key = ...
-region = us-east-1
-```
+1. Check your inbox for an *"Invitation to join AWS"* email from `no-reply@signin.aws`.
+2. Click the link, set your password, complete MFA setup.
+3. You'll land on a personal **AWS access portal** (`https://d-xxxxxxxxxx.awsapps.com/start`).
+4. Click the workshop account → choose the **`WorkshopOnlyAccess`** role → AWS Console opens.
 
-Or export them as env vars (per-shell):
+That's it. You're in. **No CLI setup, no access keys, no terminal authentication.** The Identity Center session lasts 8 hours by default; renew by going back to the access portal.
 
-```bash
-export AWS_ACCESS_KEY_ID=AKIA...
-export AWS_SECRET_ACCESS_KEY=...
-export AWS_REGION=us-east-1
-```
+### 2. The pipeline's identity (managed by the facilitator)
 
-Nothing else to do — Terraform and boto3 pick these up automatically.
-
-### AWS SSO (alternative for organizations using IAM Identity Center)
-
-```bash
-aws configure sso              # one-time setup
-aws sso login --profile yours  # refresh the session as needed
-export AWS_PROFILE=yours
-```
-
-Same applies — every tool in this repo respects `AWS_PROFILE`.
+GitHub Actions assumes an IAM role (`cloudcrafters-workshop-pipeline`) via **GitHub OIDC** — no static keys, no secrets to rotate, just short-lived federated tokens minted on each workflow run. The role's trust policy is scoped to this repo, so workflows in other repos can't borrow it. You never see or use this — it exists so the pipeline can apply your branch's changes without you needing AWS credentials of your own.
 
 ## Quick start
 
+> **No local setup required.** You can do the entire workshop from your browser: edit code on GitHub, watch the pipeline deploy, and test the agent in the AWS Console. Skip to **Optional: local development** at the bottom if you'd rather use a real editor + CLI.
+
 ### Prerequisites
-- Terraform ≥ 1.5.0
-- AWS CLI v2 with credentials configured (see [Authentication](#authentication) above)
-- Docker ≥ 24 with `buildx` (for the arm64 image build)
+- A modern browser
+- The IAM Identity Center invite from the facilitator (see [Authentication](#authentication))
+- Your GitHub account added as a collaborator to the repo
+
+### Your 7 team branches
+
+Each team has a branch named after them. There are 7 teams (4 Hogwarts houses + 3 wizarding locations):
+
+```
+gryffindor   slytherin   ravenclaw   hufflepuff
+hogsmeade    diagon      gringotts
+```
+
+The branch name **is** your `team_id` — every AWS resource the pipeline creates will be named after it.
+
+### 1. Find your team's branch on GitHub
+
+Open <https://github.com/CloudCraftersOrg/crafting-2026-internal-workshop> and use the branch dropdown to switch to your team (e.g. `gryffindor`).
+
+### 2. Edit a file in the GitHub web UI
+
+Click any file (`app/src/workshop_agent/agent.py` is the most useful starting point), then click the ✏️ pencil icon, top-right. Make your change. At the bottom of the page, **commit directly to your team's branch**.
+
+### 3. Watch the pipeline deploy
+
+Open the **Actions** tab — you'll see a "Deploy team infra" run kick off automatically.
+- First deploy on a fresh branch: ~5–8 minutes (Docker build + KB ingestion)
+- Subsequent deploys: usually ~2–3 minutes
+
+When it finishes, the workflow posts a commit comment with your team's deployment IDs (runtime ARN, KB ID, memory ID).
+
+### 4. Test the agent in the AWS Console
+
+Sign in via the Identity Center portal and go to:
+
+> **Bedrock AgentCore → Runtimes** → click `workshop_agent_<your-team>` → **Sessions / Test**
+
+Type a prompt (e.g. *"What did Harry use to sneak around Hogwarts at night?"*) and hit enter. The agent answers from the Knowledge Base, with citations.
+
+You can also browse logs at **CloudWatch → Log groups → `/aws/bedrock-agentcore/runtimes/workshop_agent_<your-team>-DEFAULT`** to see what tool the agent called and why.
+
+### Iterate
+
+1. Change `agent.py` in the GitHub web UI → commit
+2. Wait for the pipeline (Actions tab)
+3. Re-test in the AWS Console
+4. Repeat
+
+That's the full loop. No clone, no Python venv, no `terraform apply`, no Docker.
+
+---
+
+### Optional: local development
+
+If you'd rather use your own editor and a CLI, you can also clone the repo and use `invoke_agent.py` to talk to the deployed runtime. You'll need:
+
 - Python ≥ 3.12 and `uv`
-
-### 1. Deploy infrastructure
-
-Every team picks a short, lowercase **`team_id`** (e.g. `alpha`, `team-01`, `bal-1`). All AWS resources include the ID in their name and tags so multiple teams can share one AWS account without collisions.
+- AWS CLI v2 with SSO configured against the workshop account
 
 ```bash
-cd terraform/
-terraform init
-terraform plan  -var="team_id=alpha"      # preview
-terraform apply -var="team_id=alpha"      # builds + pushes the container, provisions everything,
-                                          # uploads books to S3, kicks off ingestion job
-```
+# One-time setup
+git clone https://github.com/CloudCraftersOrg/crafting-2026-internal-workshop.git
+cd crafting-2026-internal-workshop
+git checkout <your-team-branch>
 
-`terraform apply` outputs the resource IDs you'll need next:
-
-```bash
-terraform output -json
-```
-
-> **Tip:** to avoid passing `-var` every time, drop a `terraform.tfvars` file (gitignored) into `terraform/` with `team_id = "alpha"`.
-
-### 2. Configure local env
-
-```bash
-cd ../app
-cp .env.example .env
-```
-
-Fill the values from `terraform output` — see the env-var table in [`app/README.md`](app/README.md#environment-variables).
-
-### 3. Install + run
-
-```bash
+cd app
 pip install uv
 uv venv && source .venv/bin/activate
 uv pip install -e .
 
-# Local CLI (talks to Bedrock + KB directly)
-workshop-agent
+# Configure AWS SSO (one-time)
+aws configure sso          # use the start URL the facilitator provides
 
-# Or hit the deployed AgentCore runtime
+# Refresh creds when needed
+aws sso login --profile <your-profile>
+export AWS_PROFILE=<your-profile>
+
+# Populate app/.env (see below), then:
 python invoke_agent.py --interactive
 ```
 
-### 4. Verify
+#### Populating `app/.env`
 
-Try one query from each tier ([sample queries above](#difficulty-tiers-and-sample-queries)). On out-of-corpus questions (e.g. *"Who is the captain of the Holyhead Harpies in 2025?"*) CRAFTY should refuse cleanly rather than invent.
+`cp .env.example .env` first, then fill in the per-team values.
+
+**Easiest:** the deploy pipeline posts a ready-to-paste env block as a commit comment after each successful run. Open the **Actions** tab, click your team's most recent green run, follow the link to the triggering commit, and copy the env block from the bottom comment.
+
+**Alternative — pull each value from the AWS Console** (handy when you can't find the commit comment, or after a destroy + redeploy):
+
+| Variable | Where to find it in the console |
+|---|---|
+| `AWS_REGION` | Always `us-east-1` for this workshop |
+| `MODEL_ID` | Use the default already in `.env.example` (`us.amazon.nova-lite-v1:0`) unless you've changed it on your branch |
+| `MEMORY_ID` | **Bedrock → AgentCore → Memory** → click `workshop_agent_<your-team>_memory` → copy the *Memory ID* (looks like `workshop_agent_<team>_memory-xxxxxxxxxx`) |
+| `MEMORY_ACTOR_ID` | Your team name (e.g. `gryffindor`). This is just a string namespace — you choose it. |
+| `KNOWLEDGE_BASE_ID` | **Bedrock → Knowledge Bases** → click `workshop_agent_<your-team>_harry_potter_kb` → copy the *Knowledge base ID* (10-char alphanumeric) |
+| `AGENT_RUNTIME_ARN` | **Bedrock → AgentCore → Runtimes** → click `workshop_agent_<your-team>` → copy the *Runtime ARN* from the Details panel |
+
+Edit code locally, commit + push, the pipeline still does the deploy.
 
 ## Multi-team deployments
 
-Multiple teams can share **one** AWS account by giving each one a different `team_id`. Every resource Terraform creates includes that ID in its name and in its AWS tags.
+The 7 teams share **one** AWS account. Each team's branch has its own GitHub Environment with its own AWS access keys, its own Terraform state file, and its own set of named resources.
 
-| Resource | Naming pattern (with `team_id = alpha`) |
+### Naming and tagging per team
+
+Every resource Terraform creates includes the team name in its identifier and its AWS tags.
+
+| Resource | Naming pattern (with branch / team `gryffindor`) |
 |---|---|
-| AgentCore runtime | `workshop_agent_alpha` |
-| AgentCore Memory | `workshop_agent_alpha_memory` |
-| Knowledge Base | `workshop_agent_alpha_harry_potter_kb` |
-| S3 Vectors bucket | `workshop-agent-alpha-vec-<account_id>` |
+| AgentCore runtime | `workshop_agent_gryffindor` |
+| AgentCore Memory | `workshop_agent_gryffindor_memory` |
+| Knowledge Base | `workshop_agent_gryffindor_harry_potter_kb` |
+| S3 Vectors bucket | `workshop-agent-gryffindor-vec-<account_id>` |
 | S3 Vectors index | `harry-potter` (scoped within the team's vector bucket) |
-| S3 source bucket | `workshop-agent-alpha-kb-<account_id>` |
-| ECR repo | `workshop-agentcore-alpha` |
-| IAM roles | `workshop_agent_alpha_runtime_role`, `workshop_agent_alpha_kb_role` |
-| CloudWatch log group | `/aws/bedrock-agentcore/workshop_agent_alpha` |
+| S3 source bucket | `workshop-agent-gryffindor-kb-<account_id>` |
+| ECR repo | `workshop-agentcore-gryffindor` |
+| IAM roles | `workshop_agent_gryffindor_runtime_role`, `workshop_agent_gryffindor_kb_role` |
+| CloudWatch log group | `/aws/bedrock-agentcore/workshop_agent_gryffindor` |
 
-Every resource is also tagged with:
+Every resource is also tagged:
 
 ```
 Project   = cloudcrafters-workshop
@@ -284,13 +322,19 @@ Team      = <team_id>
 ManagedBy = terraform
 ```
 
-**Cost tracking by team:** in AWS Cost Explorer, filter by tag `Team = <team_id>` to see per-team spend.
+### Pipeline architecture
 
-**Each team has their own terraform state.** Either:
-- Each team forks the repo and configures their own state backend, or
-- The facilitator runs `terraform apply -var="team_id=<id>"` per team from a single workstation, swapping state files between runs.
+| | |
+|---|---|
+| **Push to a team branch** | Triggers `.github/workflows/deploy.yml` → `terraform apply -var="team_id=<branch>"` with state at `s3://cloudcrafters-workshop-2026-tfstate/workshop-2026/<branch>/terraform.tfstate` |
+| **Push to `main`** | Triggers `.github/workflows/validate.yml` only (`terraform validate`, `terraform fmt -check`, Python compile) — no deploy |
+| **Manual destroy** | `.github/workflows/destroy.yml` via the **Actions** tab, takes a `team_id` input + a confirmation string |
 
-For the workshop where the facilitator drives all deploys, the latter is simpler: keep one state file per team in S3 (different keys like `workshop-2026/<team_id>/terraform.tfstate`).
+### Cost tracking and cleanup
+
+- **Per-team spend:** AWS Cost Explorer → filter by tag `Team = <team_id>`
+- **Cleanup after the workshop:** facilitator triggers the **Destroy team infra** workflow once per team
+- **Orphan check:** `aws resourcegroupstaggingapi get-resources --tag-filters Key=Project,Values=cloudcrafters-workshop` should return empty post-cleanup
 
 **Cleanup after the workshop:** `cd terraform && terraform destroy -var="team_id=<id>"` per team. Teams that share an account can run `aws resourcegroupstaggingapi get-resources --tag-filters Key=Team,Values=<id>` to confirm everything's gone.
 
