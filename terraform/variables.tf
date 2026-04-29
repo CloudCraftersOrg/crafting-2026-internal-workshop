@@ -44,7 +44,7 @@ variable "team_id" {
 variable "model_id" {
   type        = string
   description = "Bedrock model or cross-region inference profile ID invoked by the container."
-  default     = "us.amazon.nova-lite-v1:0"
+  default     = "us.anthropic.claude-sonnet-4-6"
 }
 
 # Identifies the ECR repository that stores the agent container image

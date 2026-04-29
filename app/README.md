@@ -48,7 +48,7 @@ workshop-agent --model us.amazon.nova-pro-v1:0      # one-off model override
 | Variable | Source / value |
 |---|---|
 | `AWS_REGION` | `us-east-1` (matches the AgentCore runtime region) |
-| `MODEL_ID` | Bedrock model ID, e.g. `us.amazon.nova-lite-v1:0` |
+| `MODEL_ID` | Bedrock model ID, e.g. `us.anthropic.claude-sonnet-4-6` |
 | `MEMORY_ID` | `terraform output memory_id` |
 | `MEMORY_ACTOR_ID` | A short string per team (e.g. `team-alpha`); namespaces Memory |
 | `KNOWLEDGE_BASE_ID` | `terraform output knowledge_base_id` |
@@ -71,7 +71,7 @@ workshop-agent --model us.amazon.nova-pro-v1:0      # one-off model override
 
 ```dotenv
 AWS_REGION=us-east-1
-MODEL_ID=us.amazon.nova-lite-v1:0
+MODEL_ID=us.anthropic.claude-sonnet-4-6
 MEMORY_ID=workshop_agent_memory-xxxxxxxxxxxx
 MEMORY_ACTOR_ID=workshop-team
 MAX_RESULT_CHARS=20000
@@ -176,7 +176,7 @@ aws logs tail /aws/bedrock-agentcore/runtimes/<runtime-name>-DEFAULT --follow
   "session_id": "abc-123…",
   "timestamp": "2026-04-28T18:00:00Z",
   "memory_actor_id": "team-alpha",
-  "model_id": "us.amazon.nova-lite-v1:0",
+  "model_id": "us.anthropic.claude-sonnet-4-6",
   "conversation_turns": [
     {"role": "user", "content": "…"},
     {"role": "assistant", "content": "…"}

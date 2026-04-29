@@ -94,7 +94,7 @@ terraform apply -var="image_tag=$(git rev-parse --short HEAD)"
 | `region` | `string` | `us-east-1` | AWS region for all resources |
 | `agent_name` | `string` | `workshop_agent` | Logical project name; drives resource naming |
 | `team_id` | `string` | `shared` | Per-team suffix appended to every resource name (must be 2-16 chars, lowercase). Lets multiple teams deploy in the same account. |
-| `model_id` | `string` | `us.amazon.nova-lite-v1:0` | Bedrock model or cross-region inference profile |
+| `model_id` | `string` | `us.anthropic.claude-sonnet-4-6` | Bedrock model or cross-region inference profile |
 | `ecr_repo_name` | `string` | `workshop-agentcore` | ECR repository name |
 | `image_tag` | `string` | `latest` | Docker image tag built and registered |
 | `ecr_keep_last` | `number` | `30` | Max images retained in ECR before expiry |

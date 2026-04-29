@@ -9,7 +9,7 @@
 #
 # Required:
 #   AWS_REGION         – e.g. us-east-1
-#   MODEL_ID           – e.g. us.amazon.nova-lite-v1:0
+#   MODEL_ID           – e.g. us.anthropic.claude-sonnet-4-6
 #   MEMORY_ID          – AgentCore Memory resource ID (terraform output memory_id)
 #   MEMORY_ACTOR_ID    – Actor namespace (e.g. your team_id)
 #   KNOWLEDGE_BASE_ID  – Bedrock KB ID (terraform output knowledge_base_id)

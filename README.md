@@ -285,7 +285,7 @@ python invoke_agent.py --interactive
 | Variable | Where to find it in the console |
 |---|---|
 | `AWS_REGION` | Always `us-east-1` for this workshop |
-| `MODEL_ID` | Use the default already in `.env.example` (`us.amazon.nova-lite-v1:0`) unless you've changed it on your branch |
+| `MODEL_ID` | Use the default already in `.env.example` (`us.anthropic.claude-sonnet-4-6`) unless you've changed it on your branch |
 | `MEMORY_ID` | **Bedrock → AgentCore → Memory** → click `workshop_agent_<your-team>_memory` → copy the *Memory ID* (looks like `workshop_agent_<team>_memory-xxxxxxxxxx`) |
 | `MEMORY_ACTOR_ID` | Your team name (e.g. `gryffindor`). This is just a string namespace — you choose it. |
 | `KNOWLEDGE_BASE_ID` | **Bedrock → Knowledge Bases** → click `workshop_agent_<your-team>_harry_potter_kb` → copy the *Knowledge base ID* (10-char alphanumeric) |

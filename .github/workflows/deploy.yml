@@ -10,6 +10,7 @@ on:
       - hogsmeade
       - diagon
       - gringotts
+      - cloudcrafters
 
 # One apply per team at a time. If a team pushes twice quickly, the second push
 # waits for the first to finish — prevents Terraform state-lock contention.
