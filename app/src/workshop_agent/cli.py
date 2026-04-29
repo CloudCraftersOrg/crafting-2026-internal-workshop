@@ -194,6 +194,10 @@ async def _run_session(
                 answer = str(result)
                 bundle.add_turn("user", raw, correlation_id=log_ctx.correlation_id)
                 bundle.add_turn("assistant", answer, correlation_id=log_ctx.correlation_id)
+
+                # Persist to AgentCore Memory for cross-session recall
+                memory.save_turn(session_id, "user", raw, {"correlation_id": log_ctx.correlation_id})
+                memory.save_turn(session_id, "assistant", answer, {"correlation_id": log_ctx.correlation_id})
             except Exception as exc:
                 logger.error("repl_error", exc=exc)
                 console.print(f"[red]Error:[/red] {exc}")

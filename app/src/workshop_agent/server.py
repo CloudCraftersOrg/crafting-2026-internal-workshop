@@ -32,6 +32,7 @@ from strands.tools.mcp import MCPClient
 from strands_tools import retrieve
 
 from workshop_agent.agent import build_system_prompt
+from workshop_agent.tools import query_structured_data
 from workshop_agent.config import load_config
 from workshop_agent.export import BundleBuilder
 from workshop_agent.logging import AgentLogger, LogContext
@@ -109,6 +110,9 @@ def _get_or_create_session(session_id: str) -> dict[str, Any]:
         if config.knowledge_base_id:
             os.environ.setdefault("KNOWLEDGE_BASE_ID", config.knowledge_base_id)
             tools.append(retrieve)
+
+        # Add structured data query tool (Team Slytherin)
+        tools.append(query_structured_data)
 
         mcp_client: Optional[MCPClient] = None
 

@@ -1,0 +1,17 @@
+name,house,blood_status,role,first_book,patronus,wand_core,allegiance,death_book
+Harry Potter,Gryffindor,Half-blood,Protagonist,Philosopher's Stone,Stag,Phoenix feather,Order of the Phoenix,Survived
+Hermione Granger,Gryffindor,Muggle-born,Protagonist,Philosopher's Stone,Otter,Dragon heartstring,Order of the Phoenix,Survived
+Ron Weasley,Gryffindor,Pure-blood,Protagonist,Philosopher's Stone,Jack Russell Terrier,Unicorn hair,Order of the Phoenix,Survived
+Albus Dumbledore,Gryffindor,Half-blood,Headmaster,Philosopher's Stone,Phoenix,Thestral tail hair,Order of the Phoenix,Half-Blood Prince
+Severus Snape,Slytherin,Half-blood,Professor,Philosopher's Stone,Doe,Phoenix feather,Order of the Phoenix,Deathly Hallows
+Draco Malfoy,Slytherin,Pure-blood,Antagonist,Philosopher's Stone,None,Unicorn hair,Death Eaters,Survived
+Tom Riddle,Slytherin,Half-blood,Antagonist,Chamber of Secrets,None,Phoenix feather,Death Eaters,Deathly Hallows
+Sirius Black,Gryffindor,Pure-blood,Godfather,Prisoner of Azkaban,Unknown,Unknown,Order of the Phoenix,Order of the Phoenix
+Remus Lupin,Gryffindor,Half-blood,Professor,Prisoner of Azkaban,Wolf,Unicorn hair,Order of the Phoenix,Deathly Hallows
+Luna Lovegood,Ravenclaw,Pure-blood,Supporting,Order of the Phoenix,Hare,Unknown,Dumbledore's Army,Survived
+Neville Longbottom,Gryffindor,Pure-blood,Supporting,Philosopher's Stone,Unknown,Unknown,Dumbledore's Army,Survived
+Bellatrix Lestrange,Slytherin,Pure-blood,Death Eater,Order of the Phoenix,Unknown,Dragon heartstring,Death Eaters,Deathly Hallows
+Dolores Umbridge,Slytherin,Half-blood,Antagonist,Order of the Phoenix,Persian cat,Unknown,Ministry of Magic,Survived
+Fred Weasley,Gryffindor,Pure-blood,Supporting,Philosopher's Stone,Magpie,Unknown,Order of the Phoenix,Deathly Hallows
+George Weasley,Gryffindor,Pure-blood,Supporting,Philosopher's Stone,Magpie,Unknown,Order of the Phoenix,Survived
+Ginny Weasley,Gryffindor,Pure-blood,Supporting,Chamber of Secrets,Horse,Unknown,Dumbledore's Army,Survived
