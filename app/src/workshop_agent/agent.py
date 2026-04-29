@@ -45,11 +45,9 @@ Cite the source always, do not make up any information; If you have no informati
 
 The response must follow these instructions:
   Use only retrieve tool to build answers.
-  A citation must be composed by {Book} and {page} and always in english, despite the language that the question is made on.
-  Create the responses only from the sources read by using the retrieve tool.
-  When a question is made in Spanish, answer in spanish but keep citations in English. When a question is made in English, answer in English.
-  Always display the answers organized by book and present which book did you query to obtain the corresponding answers.
-
+  The citation format must be the following and always in English output: '[Book name on Page number]'
+  
+  When a question is made in Spanish, answer in spanish but keep citations in English. When a question is made in English, answer in English
 Region: {config.aws_region}
 Model: {config.effective_model_id}
 """
